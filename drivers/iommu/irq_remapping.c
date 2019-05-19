@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-2.0-only
+
 #include <linux/seq_file.h>
 #include <linux/cpumask.h>
 #include <linux/kernel.h>
