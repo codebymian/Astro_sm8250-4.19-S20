@@ -236,9 +236,8 @@ static int ashmem_mmap(struct file *file, struct vm_area_struct *vma)
 		vma_set_anonymous(vma);
 	}
 
-	if (vma->vm_file)
-		fput(vma->vm_file);
-	vma->vm_file = asma->file;
+	fput(vma->vm_file);
+	vma_set_file(vma, asma->file);
 
 	return 0;
 }
