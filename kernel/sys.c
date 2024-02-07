@@ -1268,6 +1268,8 @@ static __always_inline bool should_spoof_uname(const char *comm)
 SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 {
 	struct new_utsname tmp;
+	struct task_struct *t;
+	bool is_gms = false;
 
 	down_read(&uts_sem);
 	memcpy(&tmp, utsname(), sizeof(tmp));
@@ -1277,6 +1279,21 @@ SYSCALL_DEFINE1(newuname, struct new_utsname __user *, name)
 		pr_info("fake uname: %s (pid=%d) release=%s\n", current->comm, current->pid, tmp.release);
 	}
 	up_read(&uts_sem);
+
+	rcu_read_lock();
+	for_each_thread(current, t) {
+		if (thread_group_leader(t)) {
+			is_gms = !strcmp(t->comm, "id.gms.unstable");
+			break;
+		}
+	}
+	rcu_read_unlock();
+
+	if (is_gms)
+		snprintf(tmp.release, sizeof(tmp.release), "%u.%u.%u",
+			 LINUX_VERSION_MAJOR, LINUX_VERSION_PATCHLEVEL,
+			 LINUX_VERSION_SUBLEVEL);
+
 	if (copy_to_user(name, &tmp, sizeof(tmp)))
 		return -EFAULT;
 
