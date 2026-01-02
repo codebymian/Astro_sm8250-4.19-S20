@@ -4,7 +4,7 @@
 ## AnyKernel setup
 # begin properties
 properties() { '
-kernel.string=not_Kernel by @skye // tachyon
+kernel.string=not
 do.devicecheck=1
 do.modules=0
 do.systemless=1
@@ -13,11 +13,11 @@ do.cleanuponabort=0
 device.name1=r8q
 device.name2=r8qxx
 device.name3=r8qxxx
-device.name4=mustang
-supported.versions=11 - 18
+device.name4=ossi
+device.name5=komodo
+supported.versions=11 - 16
 supported.patchlevels=
 '; } # end properties
-# i use pixel 10 pro xl spoof in my r8q, thats why mustang is there, no-one will flash a 4.19 kernel on p10pxl anyway
 
 # shell variables
 block=/dev/block/platform/soc/1d84000.ufshc/by-name/boot;
@@ -34,6 +34,10 @@ set_perm_recursive 0 0 755 644 $ramdisk/*;
 set_perm_recursive 0 0 750 750 $ramdisk/init* $ramdisk/sbin;
 
 ## AnyKernel boot install
+
+ui_print " "
+ui_print " • Spliting boot image... • "
+
 split_boot;
 
 case "$ZIPFILE" in
@@ -50,23 +54,21 @@ case "$ZIPFILE" in
 esac
 
 # begin cmdline changes
-oneui=$(file_getprop /system/build.prop ro.build.version.oneui);
-cos=$(file_getprop /system/build.prop ro.product.system.brand);
-if [ -n "$oneui" ]; then
+gos=$(file_getprop /system/build.prop ro.build.host);
+if [ $gos == tachyon ]; then
    ui_print " "
-   ui_print " • OneUI Support was removed! • " # OneUI 7.X/6.X/5.X/4.X/3.X bomb
-   ui_print " "
-   abort " • Instalation aborted! • "
-elif [ $cos == oplus ]; then
-   ui_print " "
-   ui_print " • Oplus ROM detected! • " # Damn
+   ui_print " • GrapheneOS detected! • "
    ui_print " "
    ui_print " • Patching SELinux... • "
    patch_cmdline "androidboot.selinux" "androidboot.selinux=permissive";
+   ui_print " "
+   ui_print " • Setting android verified boot state to green... • "
+   patch_cmdline "ro.boot.verifiedbootstate=orange" "ro.boot.verifiedbootstate=green";
+   patch_cmdline "androidboot.verifiedbootstate=orange" "androidboot.verifiedbootstate=green";
 else
    ui_print " "
-   ui_print " • AOSP ROM detected! • " # Android 16/15/14/13 veri gud
-   ui_print " "
+   ui_print " • Spoofing verified boot state to green... • "
+   patch_cmdline "ro.boot.verifiedbootstate=orange" "ro.boot.verifiedbootstate=green";
 fi
 
 ui_print " "
@@ -77,6 +79,9 @@ dd if=$home/vbmeta.img of=/dev/block/platform/soc/1d84000.ufshc/by-name/vbmeta
 ui_print " "
 ui_print " • Patching dtbo unconditionally... • "
 dd if=$home/dtbo.img of=/dev/block/platform/soc/1d84000.ufshc/by-name/dtbo
+
+ui_print " "
+ui_print " • Flashing boot image... • "
 
 flash_boot;
 ## end boot install
