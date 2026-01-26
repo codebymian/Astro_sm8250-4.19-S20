@@ -61,7 +61,8 @@ if [ -n "$oneui" ]; then
    ui_print " "
    ui_print " • OneUI Support was removed! • " # OneUI 7.X/6.X/5.X/4.X/3.X bomb
    ui_print " "
-   ui_print " • You are on your own now. • "
+   ui_print " • Patching Fingerprint Sensor... • "
+   patch_cmdline "android.is_aosp" "android.is_aosp=0";
    ui_print " "
 elif [ $gos == tachyon ]; then
    ui_print " "
@@ -69,6 +70,7 @@ elif [ $gos == tachyon ]; then
    ui_print " "
    ui_print " • Patching SELinux... • "
    patch_cmdline "androidboot.selinux" "androidboot.selinux=permissive";
+   patch_cmdline "android.is_aosp" "android.is_aosp=0";
    ui_print " "
    ui_print " • Setting android verified boot state to green... • "
    patch_cmdline "ro.boot.verifiedbootstate=orange" "ro.boot.verifiedbootstate=green";
@@ -79,10 +81,16 @@ elif [ $cos == oplus ]; then
    ui_print " "
    ui_print " • Patching SELinux... • "
    patch_cmdline "androidboot.selinux" "androidboot.selinux=permissive";
+   patch_cmdline "android.is_aosp" "android.is_aosp=0";
 else
+   ui_print " "
+   ui_print " • AOSP ROM detected! • " # Android 16/15/14/13 veri gud
    ui_print " "
    ui_print " • Spoofing verified boot state to green... • "
    patch_cmdline "ro.boot.verifiedbootstate=orange" "ro.boot.verifiedbootstate=green";
+   ui_print " "
+   ui_print " • Patching Fingerprint Sensor... • "
+   patch_cmdline "android.is_aosp" "android.is_aosp=1";
 fi
 
 ui_print " "
