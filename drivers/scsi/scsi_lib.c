@@ -628,7 +628,7 @@ static bool scsi_end_request(struct request *req, blk_status_t error,
 	else
 		blk_mq_run_hw_queues(q, true);
 
-		percpu_ref_put(&q->q_usage_counter);
+	percpu_ref_put(&q->q_usage_counter);
 
 	put_device(&sdev->sdev_gendev);
 	return false;

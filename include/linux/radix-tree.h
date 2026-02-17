@@ -228,8 +228,6 @@ static inline int radix_tree_exception(void *arg)
 	return unlikely((unsigned long)arg & RADIX_TREE_ENTRY_MASK);
 }
 
-int radix_tree_insert(struct radix_tree_root *, unsigned long index,
-			void *);
 int __radix_tree_insert(struct radix_tree_root *, unsigned long index,
 			unsigned order, void *);
 static inline int radix_tree_insert(struct radix_tree_root *root,
