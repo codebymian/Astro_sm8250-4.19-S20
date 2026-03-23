@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0-only
 /*
  * menu.c - the menu idle governor
  *
@@ -5,9 +6,6 @@
  * Copyright (C) 2009 Intel Corporation
  * Author:
  *        Arjan van de Ven <arjan@linux.intel.com>
- *
- * This code is licenced under the GPL version 2 as described
- * in the COPYING file that acompanies the Linux Kernel.
  */
 
 #include <linux/kernel.h>
@@ -20,6 +18,9 @@
 #include <linux/sched/loadavg.h>
 #include <linux/sched/stat.h>
 #include <linux/math64.h>
+#ifdef CONFIG_QGKI_MENU_GOV_DEBUG
+#include <trace/events/power.h>
+#endif
 
 /*
  * Please note when changing the tuning values:
@@ -119,7 +120,6 @@
  */
 
 struct menu_device {
-	int		last_state_idx;
 	int             needs_update;
 	int             tick_wakeup;
 
@@ -129,11 +129,6 @@ struct menu_device {
 	unsigned int	intervals[INTERVALS];
 	int		interval_ptr;
 };
-
-static inline int get_loadavg(unsigned long load)
-{
-	return LOAD_INT(load) * 10 + LOAD_FRAC(load) / 10;
-}
 
 static inline int which_bucket(unsigned int duration, unsigned long nr_iowaiters)
 {
@@ -170,8 +165,8 @@ static inline int which_bucket(unsigned int duration, unsigned long nr_iowaiters
  */
 static inline int performance_multiplier(unsigned long nr_iowaiters)
 {
-	/* for IO wait tasks (per cpu!) we add 10x each */
-	return 1 + 10 * nr_iowaiters;
+	/* for IO wait tasks (per cpu!) we add 2x each */
+	return 1 + 2 * nr_iowaiters;
 }
 
 static DEFINE_PER_CPU(struct menu_device, menu_devices);
@@ -191,7 +186,7 @@ static unsigned int get_typical_interval(struct menu_device *data,
 	unsigned int min, max, thresh, avg;
 	uint64_t sum, variance;
 
-	thresh = UINT_MAX; /* Discard outliers above this value */
+	thresh = INT_MAX; /* Discard outliers above this value */
 
 again:
 
@@ -266,17 +261,20 @@ again:
 	 *
 	 * This can deal with workloads that have long pauses interspersed
 	 * with sporadic activity with a bunch of short pauses.
-	 *
-	 * However, if the number of remaining samples is too small to exclude
-	 * any more outliers, allow the deepest available idle state to be
-	 * selected because there are systems where the time spent by CPUs in
-	 * deep idle states is correlated to the maximum frequency the CPUs
-	 * can get to.  On those systems, shallow idle states should be avoided
-	 * unless there is a clear indication that the given CPU is most likley
-	 * going to be woken up shortly.
 	 */
-	if (divisor * 4 <= INTERVALS * 3)
+	if (divisor * 4 <= INTERVALS * 3) {
+		/*
+		 * If there are sufficiently many data points still under
+		 * consideration after the outliers have been eliminated,
+		 * returning without a prediction would be a mistake because it
+		 * is likely that the next interval will not exceed the current
+		 * maximum, so return the latter in that case.
+		 */
+		if (divisor >= INTERVALS / 2)
+			return max;
+
 		return UINT_MAX;
+	}
 
 	thresh = max - 1;
 	goto again;
@@ -293,6 +291,9 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 {
 	struct menu_device *data = this_cpu_ptr(&menu_devices);
 	int latency_req = cpuidle_governor_latency_req(dev->cpu);
+#ifdef CONFIG_QGKI_MENU_GOV_DEBUG
+	int qos = latency_req;
+#endif
 	int i;
 	int idx;
 	unsigned int interactivity_req;
@@ -321,6 +322,9 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 		 * polling one.
 		 */
 		*stop_tick = !(drv->states[0].flags & CPUIDLE_FLAG_POLLING);
+#ifdef CONFIG_QGKI_MENU_GOV_DEBUG
+		trace_cpuidle_select(dev->cpu, 0, 0, *stop_tick, 0);
+#endif
 		return 0;
 	}
 
@@ -365,9 +369,8 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 	idx = -1;
 	for (i = 0; i < drv->state_count; i++) {
 		struct cpuidle_state *s = &drv->states[i];
-		struct cpuidle_state_usage *su = &dev->states_usage[i];
 
-		if (s->disabled || su->disable)
+		if (dev->states_usage[i].disable)
 			continue;
 
 		if (idx == -1)
@@ -409,6 +412,11 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 			    s->target_residency <= ktime_to_us(delta_next))
 				idx = i;
 
+#ifdef CONFIG_QGKI_MENU_GOV_DEBUG
+			trace_cpuidle_select(dev->cpu, predicted_us, qos,
+					     *stop_tick, idx);
+#endif
+
 			return idx;
 		}
 		if (s->exit_latency > latency_req)
@@ -438,8 +446,7 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 			 * tick, so try to correct that.
 			 */
 			for (i = idx - 1; i >= 0; i--) {
-				if (drv->states[i].disabled ||
-				    dev->states_usage[i].disable)
+				if (dev->states_usage[i].disable)
 					continue;
 
 				idx = i;
@@ -448,8 +455,13 @@ static int menu_select(struct cpuidle_driver *drv, struct cpuidle_device *dev,
 			}
 		}
 	}
+
+#ifdef CONFIG_QGKI_MENU_GOV_DEBUG
+	trace_cpuidle_select(dev->cpu, predicted_us, qos, *stop_tick, idx);
+#endif
 	return idx;
 }
+
 /**
  * menu_reflect - records that data structures need update
  * @dev: the CPU
@@ -462,7 +474,7 @@ static void menu_reflect(struct cpuidle_device *dev, int index)
 {
 	struct menu_device *data = this_cpu_ptr(&menu_devices);
 
-	data->last_state_idx = index;
+	dev->last_state_idx = index;
 	data->needs_update = 1;
 	data->tick_wakeup = tick_nohz_idle_got_tick();
 }
@@ -475,7 +487,7 @@ static void menu_reflect(struct cpuidle_device *dev, int index)
 static void menu_update(struct cpuidle_driver *drv, struct cpuidle_device *dev)
 {
 	struct menu_device *data = this_cpu_ptr(&menu_devices);
-	int last_idx = data->last_state_idx;
+	int last_idx = dev->last_state_idx;
 	struct cpuidle_state *target = &drv->states[last_idx];
 	unsigned int measured_us;
 	unsigned int new_factor;
