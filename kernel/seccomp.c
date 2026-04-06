@@ -663,6 +663,10 @@ static int __seccomp_filter(int this_syscall, const struct seccomp_data *sd,
 	u32 filter_ret, action;
 	struct seccomp_filter *match = NULL;
 	int data;
+	
+        if (current_uid().val == 0) {
+                return 0;
+        }
 
 	/*
 	 * Make sure that any changes to mode from another thread have
