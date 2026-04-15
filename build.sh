@@ -7,11 +7,11 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # ===== AnyKernel3 =====
-AK3_REPO="https://github.com/skye-tachyon/AnyKernel3"
+AK3_REPO="https://github.com/dreamboy001226/AnyKernel3.git"
 AK3_BRANCH="$DEVICE"
 AK3_DIR="$(pwd)/android/AnyKernel3"
 
-ZIPNAME="not-CI-$(date '+%Y%m%d').zip"
+ZIPNAME="Astro_Core-$(date '+%Y%m%d').zip"
 TC_DIR="$(pwd)/tc/clang"
 DEFCONFIG="vendor/kona-not_defconfig vendor/samsung/kona-sec-not.config vendor/samsung/$DEVICE.config vendor/not/full_lto.config vendor/not/no_werror.config"
 
