@@ -60,7 +60,7 @@ jobs:
 
       - name: Set ZIP File Path
         run: |
-         zip=$(ls not-CI-*.zip 2>/dev/null | head -n1)
+         zip=$(ls Astro_Core-*.zip 2>/dev/null | head -n1)
          if [ -z "$zip" ]; then
            echo "❌ No ZIP found!"
            exit 1
