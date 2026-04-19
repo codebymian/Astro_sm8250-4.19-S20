@@ -73,8 +73,6 @@ extern "C" {
 #include <linux/export.h>
 #include <linux/string.h>
 
-#include "lz4armv8/lz4accel.h"
-
 #define LZ4_FORCE_INLINE static inline __attribute__((always_inline))
 
 /*^***************************************************************
