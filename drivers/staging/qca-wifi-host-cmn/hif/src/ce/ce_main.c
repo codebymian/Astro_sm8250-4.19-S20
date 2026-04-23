@@ -2132,7 +2132,7 @@ hif_send_head(struct hif_opaque_softc *hif_ctx,
 
 	if (qdf_unlikely(!ce_hdl)) {
 		HIF_ERROR("%s: error CE handle is null", __func__);
-		return A_ERROR;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	QDF_NBUF_UPDATE_TX_PKT_COUNT(nbuf, QDF_NBUF_TX_PKT_HIF);
@@ -2789,7 +2789,6 @@ void hif_ce_stop(struct hif_softc *scn)
 	 */
 
 	if (scn->athdiag_procfs_inited) {
-		athdiag_procfs_remove();
 		scn->athdiag_procfs_inited = false;
 	}
 
@@ -3372,7 +3371,6 @@ void hif_unconfig_ce(struct hif_softc *hif_sc)
 		}
 	}
 	if (hif_sc->athdiag_procfs_inited) {
-		athdiag_procfs_remove();
 		hif_sc->athdiag_procfs_inited = false;
 	}
 }
@@ -3609,10 +3607,6 @@ int hif_config_ce(struct hif_softc *scn)
 		ce_register_irq(hif_state, (1 << pipe_num));
 	}
 
-	if (athdiag_procfs_init(scn) != 0) {
-		A_TARGET_ACCESS_UNLIKELY(scn);
-		goto err;
-	}
 	scn->athdiag_procfs_inited = true;
 
 	HIF_DBG("%s: ce_init done", __func__);
