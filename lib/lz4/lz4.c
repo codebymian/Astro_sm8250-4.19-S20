@@ -450,6 +450,9 @@ static const int dec64table[8] = { 0, 0, 0, -1, -4, 1, 2, 3 };
 #endif
 #endif
 
+#include <linux/slab.h>
+#include <linux/gfp.h>
+
 #if LZ4_FAST_DEC_LOOP
 
 LZ4_FORCE_INLINE void LZ4_memcpy_using_offset_base(BYTE *dstPtr,
@@ -1775,9 +1778,8 @@ int LZ4_compress_destSize(const char *src, char *dst, int *srcSizePtr,
 		LZ4_stream_t)); /* malloc-calloc always properly aligned */
 	if (ctx == NULL)
 		return 0;
-#else
-	LZ4_stream_t ctxBody;
-	LZ4_stream_t *const ctx = &ctxBody;
+#else //
+	LZ4_stream_t *ctx = kmalloc(sizeof(LZ4_stream_t), GFP_KERNEL);
 #endif
 
 	int result = LZ4_compress_destSize_extState_internal(
