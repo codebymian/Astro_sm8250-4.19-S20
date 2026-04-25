@@ -37,7 +37,8 @@ USERINCLUDE     += \
 # Needed to be compatible with the O= option
 LINUXINCLUDE    += \
                 -I$(srctree)/techpack/sec-camera/include/uapi \
-                -I$(srctree)/techpack/sec-camera/include
+                -I$(srctree)/techpack/sec-camera/include \
+                -I$(srctree)/drivers/misc #for qseecom_kernel.h in cam_csiphy_core.c
 obj-y += drivers/
 else
 $(info Target not found)
