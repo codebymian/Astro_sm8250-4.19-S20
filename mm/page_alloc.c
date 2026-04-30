@@ -323,6 +323,7 @@ compound_page_dtor * const compound_page_dtors[] = {
  */
 int min_free_kbytes = 1024;
 int user_min_free_kbytes = -1;
+
 #ifdef CONFIG_DISCONTIGMEM
 /*
  * DiscontigMem defines memory ranges as separate pg_data_t even if the ranges
@@ -335,8 +336,7 @@ int user_min_free_kbytes = -1;
  */
 int watermark_boost_factor __read_mostly;
 #else
-/* Set watermark_boost_factor 0 by default(disable) */
-int watermark_boost_factor __read_mostly;
+int watermark_boost_factor __read_mostly = 0;
 #endif
 int watermark_scale_factor = 10;
 
