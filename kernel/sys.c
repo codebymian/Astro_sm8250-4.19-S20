@@ -1255,10 +1255,13 @@ static __always_inline bool should_spoof_uname(const char *comm)
 	if (unlikely(current_uid().val != 0))
 		return false;
 
-	return (!strncmp(comm, "bpfloader", 9) ||
-		!strncmp(comm, "netbpfload", 10) ||
-		!strncmp(comm, "netd", 4) ||
-		!strncmp(comm, "uprobestats", 11));
+
+
+	return (!strncmp(current->comm, "bpfloader", 9) ||
+		!strncmp(current->comm, "netbpfload", 10) ||
+		!strncmp(current->comm, "uprobestatsbpfload", 18) ||
+		!strncmp(current->comm, "netd", 4) ||
+		!strncmp(current->comm, "uprobestats", 11));
 }
 
 
